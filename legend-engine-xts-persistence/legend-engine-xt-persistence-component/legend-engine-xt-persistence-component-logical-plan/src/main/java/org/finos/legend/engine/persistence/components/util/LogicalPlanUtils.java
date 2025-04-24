@@ -429,6 +429,23 @@ public class LogicalPlanUtils
         return stagedFilesFields;
     }
 
+    public static List<Value> extractStagedFilesFieldValuesForAvro(Dataset dataset)
+    {
+        List<Value> stagedFilesFields = new ArrayList<>();
+        boolean columnNumbersPresent = dataset.schema().fields().stream().allMatch(field -> field.columnNumber().isPresent());
+        int iter = 1;
+        for (Field field : dataset.schema().fields())
+        {
+            if (field.type().equals(DATE))
+            {
+                stagedFilesFields.add(getStagedFilesFieldValueWithType(dataset, field, FieldType.builder().dataType(DATE).build(), columnNumbersPresent, iter++));
+            }
+
+            stagedFilesFields.add(getStagedFilesFieldValueWithType(dataset, field, FieldType.builder().dataType(VARCHAR).build(), columnNumbersPresent, iter++));
+        }
+        return stagedFilesFields;
+    }
+
     public static StagedFilesFieldValue getStagedFilesFieldValueWithType(Dataset dataset, Field field, FieldType fieldType, boolean columnNumbersPresent, int counter)
     {
         return StagedFilesFieldValue.builder()

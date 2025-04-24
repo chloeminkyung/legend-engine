@@ -187,15 +187,19 @@ class BulkLoadPlanner extends Planner
             fieldsToSelect.add(MetadataFileNameField.builder().stagedFilesDatasetProperties(stagedFilesDataset.stagedFilesDatasetProperties()).build());
             fieldsToSelect.add(MetadataRowNumberField.builder().stagedFilesDatasetProperties(stagedFilesDataset.stagedFilesDatasetProperties()).build());
 
+            List<Value> fieldsToSelectForAvro = LogicalPlanUtils.extractStagedFilesFieldValuesForAvro(stagingDataset());
+
             List<Value> fieldsToInsert = new ArrayList<>(stagingDataset().schemaReference().fieldValues());
             fieldsToInsert.add(FieldValue.builder().fieldName(FILE).datasetRef(stagingDataset().datasetReference()).build());
             fieldsToInsert.add(FieldValue.builder().fieldName(ROW_NUMBER).datasetRef(stagingDataset().datasetReference()).build());
 
             Dataset selectStage = StagedFilesSelection.builder().source(stagedFilesDataset).addAllFields(fieldsToSelect).build();
+            Dataset selectStageForAvro = StagedFilesSelection.builder().source(stagedFilesDataset).addAllFields(fieldsToSelectForAvro).build();
 
             Copy copy = Copy.builder()
                 .targetDataset(validationDataset)
                 .sourceDataset(selectStage)
+                .avroSourceDataset(selectStageForAvro)
                 .addAllFields(fieldsToInsert)
                 .stagedFilesDatasetProperties(stagedFilesDataset.stagedFilesDatasetProperties())
                 .validationMode(false)
@@ -297,6 +301,7 @@ class BulkLoadPlanner extends Planner
                 Copy.builder()
                         .targetDataset(mainDataset())
                         .sourceDataset(selectStage)
+                        .avroSourceDataset(Optional.empty())
                         .addAllFields(fieldsToInsert)
                         .stagedFilesDatasetProperties(stagedFilesDataset.stagedFilesDatasetProperties())
                         .build()));
