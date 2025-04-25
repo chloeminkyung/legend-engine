@@ -99,6 +99,13 @@ public class BulkLoadTest
         .elementPath("col_datetime")
         .build();
 
+    private static Field col8 = Field.builder()
+        .name("col_date")
+        .type(FieldType.of(DataType.DATE, Optional.empty(), Optional.empty()))
+        .columnNumber(1)
+        .elementPath("col_date")
+        .build();
+
     private static Field col1NonNullable = Field.builder()
             .name("col_int")
             .type(FieldType.of(DataType.INT, Optional.empty(), Optional.empty()))
@@ -914,7 +921,7 @@ public class BulkLoadTest
                     .location("my_location")
                     .fileFormat(UserDefinedFileFormat.of("my_file_format"))
                     .addAllFilePaths(filesList).build())
-            .schema(SchemaDefinition.builder().addAllFields(Arrays.asList(col6, col7)).build())
+            .schema(SchemaDefinition.builder().addAllFields(Arrays.asList(col6, col7, col8)).build())
             .build();
 
         Dataset mainDataset = DatasetDefinition.builder()
@@ -937,15 +944,18 @@ public class BulkLoadTest
         List<String> ingestSql = operations.ingestSql();
         Map<StatisticName, String> statsSql = operations.postIngestStatisticsSql();
 
-        String expectedCreateTableSql = "CREATE TABLE IF NOT EXISTS \"my_db\".\"my_name\"(\"col_string\" VARCHAR,\"col_datetime\" DATETIME,\"digest\" VARCHAR,\"batch_id\" INTEGER,\"append_time\" DATETIME)";
+        String expectedCreateTableSql = "CREATE TABLE IF NOT EXISTS \"my_db\".\"my_name\"(\"col_string\" VARCHAR,\"col_datetime\" DATETIME,\"col_date\" DATE,\"digest\" VARCHAR,\"batch_id\" INTEGER,\"append_time\" DATETIME)";
 
         String expectedIngestSql = "COPY INTO \"my_db\".\"my_name\" " +
-            "(\"col_string\", \"col_datetime\", \"digest\", \"batch_id\", \"append_time\") " +
-            "FROM (SELECT legend_persistence_stage.$1:\"col_string\" as \"col_string\",legend_persistence_stage.$1:\"col_datetime\" as \"col_datetime\"," +
-            "LAKEHOUSE_UDF(CONCAT(COLUMN_STRING_UDF('col_datetime',CAST(legend_persistence_stage.$1:\"col_datetime\" AS DATETIME)),COLUMN_STRING_UDF('col_string',CAST(legend_persistence_stage.$1:\"col_string\" AS VARCHAR))))," +
-            "(SELECT COALESCE(MAX(batch_metadata.\"table_batch_id\"),0)+1 FROM batch_metadata as batch_metadata WHERE UPPER(batch_metadata.\"table_name\") = 'MY_NAME'),'2000-01-01 00:00:00.000000' " +
-            "FROM my_location as legend_persistence_stage) " +
-            "FILES = ('/path/xyz/file1.csv', '/path/xyz/file2.csv') FILE_FORMAT = (FORMAT_NAME = 'my_file_format') ON_ERROR = 'ABORT_STATEMENT'";
+                "(\"col_string\", \"col_datetime\", \"col_date\", \"digest\", \"batch_id\", \"append_time\") " +
+                "FROM (SELECT legend_persistence_stage.$1:\"col_string\" as \"col_string\"," +
+                "legend_persistence_stage.$1:\"col_datetime\" as \"col_datetime\"," +
+                "legend_persistence_stage.$1:\"col_date\" as \"col_date\"," +
+                "LAKEHOUSE_UDF(CONCAT(COLUMN_STRING_UDF('col_date',CAST(legend_persistence_stage.$1:\"col_date\" AS DATE)),COLUMN_STRING_UDF('col_datetime',CAST(legend_persistence_stage.$1:\"col_datetime\" AS DATETIME))," +
+                "COLUMN_STRING_UDF('col_string',CAST(legend_persistence_stage.$1:\"col_string\" AS VARCHAR))))," +
+                "(SELECT COALESCE(MAX(batch_metadata.\"table_batch_id\"),0)+1 " +
+                "FROM batch_metadata as batch_metadata WHERE UPPER(batch_metadata.\"table_name\") = 'MY_NAME'),'2000-01-01 00:00:00.000000' " +
+                "FROM my_location as legend_persistence_stage) FILES = ('/path/xyz/file1.csv', '/path/xyz/file2.csv') FILE_FORMAT = (FORMAT_NAME = 'my_file_format') ON_ERROR = 'ABORT_STATEMENT'";
 
         Assertions.assertEquals(expectedCreateTableSql, preActionsSql.get(0));
         Assertions.assertEquals(expectedIngestSql, ingestSql.get(0));

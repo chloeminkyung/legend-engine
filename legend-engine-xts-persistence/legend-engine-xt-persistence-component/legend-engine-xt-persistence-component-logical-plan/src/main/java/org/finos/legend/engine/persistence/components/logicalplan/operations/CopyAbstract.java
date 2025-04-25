@@ -14,6 +14,7 @@
 
 package org.finos.legend.engine.persistence.components.logicalplan.operations;
 
+import java.util.Optional;
 import org.finos.legend.engine.persistence.components.logicalplan.datasets.Dataset;
 import org.finos.legend.engine.persistence.components.logicalplan.datasets.StagedFilesDatasetProperties;
 import org.finos.legend.engine.persistence.components.logicalplan.values.Value;
@@ -36,6 +37,8 @@ public interface CopyAbstract extends Operation
     Dataset targetDataset();
 
     Dataset sourceDataset();
+
+    Optional<Dataset> avroSourceDataset();
 
     List<Value> fields();
 

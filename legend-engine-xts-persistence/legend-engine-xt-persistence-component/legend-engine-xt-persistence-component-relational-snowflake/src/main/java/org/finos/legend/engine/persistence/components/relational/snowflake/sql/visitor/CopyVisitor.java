@@ -14,8 +14,10 @@
 
 package org.finos.legend.engine.persistence.components.relational.snowflake.sql.visitor;
 
+import net.snowflake.client.jdbc.internal.joda.time.chrono.AssembledChronology;
 import org.finos.legend.engine.persistence.components.common.FileFormatType;
 import org.finos.legend.engine.persistence.components.logicalplan.LogicalPlanNode;
+import org.finos.legend.engine.persistence.components.logicalplan.datasets.Dataset;
 import org.finos.legend.engine.persistence.components.logicalplan.operations.Copy;
 import org.finos.legend.engine.persistence.components.physicalplan.PhysicalPlanNode;
 import org.finos.legend.engine.persistence.components.relational.snowflake.logicalplan.datasets.FileFormat;
@@ -31,9 +33,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import static org.finos.legend.engine.persistence.components.common.FileFormatType.AVRO;
 
 public class CopyVisitor implements LogicalPlanVisitor<Copy>
 {
+    static Dataset selectFields;
+
     @Override
     public VisitorResult visit(PhysicalPlanNode prev, Copy current, VisitorContext context)
     {
@@ -43,7 +48,7 @@ public class CopyVisitor implements LogicalPlanVisitor<Copy>
         prev.push(copyStatement);
 
         List<LogicalPlanNode> logicalPlanNodes = new ArrayList<>();
-        logicalPlanNodes.add(current.sourceDataset());
+        logicalPlanNodes.add(this.selectFields);
         logicalPlanNodes.add(current.targetDataset());
         if (!current.fields().isEmpty())
         {
@@ -89,7 +94,17 @@ public class CopyVisitor implements LogicalPlanVisitor<Copy>
                 }
                 copyStatement.setFileFormatType(standardFileFormat.formatType());
                 copyStatement.setFileFormatOptions(formatOptions);
+
+                if (standardFileFormat.formatType().equals(AVRO))
+                {
+                    selectFields = current.avroSourceDataset().get();
+                }
+                else
+                {
+                    selectFields = current.sourceDataset();
+                }
             }
+
         }
     }
 }
