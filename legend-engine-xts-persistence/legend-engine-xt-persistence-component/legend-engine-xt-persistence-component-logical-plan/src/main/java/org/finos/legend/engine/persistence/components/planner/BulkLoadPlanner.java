@@ -280,6 +280,8 @@ class BulkLoadPlanner extends Planner
     private LogicalPlan buildLogicalPlanForTransformWhileCopy(Resources resources)
     {
         List<Value> fieldsToSelect = LogicalPlanUtils.extractStagedFilesFieldValues(stagingDataset());
+        List<Value> fieldsToSelectForAvro = LogicalPlanUtils.extractStagedFilesFieldValuesForAvro(stagingDataset());
+
         List<Value> fieldsToInsert = new ArrayList<>(stagingDataset().schemaReference().fieldValues());
 
         // Add digest
@@ -297,11 +299,13 @@ class BulkLoadPlanner extends Planner
         }
 
         Dataset selectStage = StagedFilesSelection.builder().source(stagedFilesDataset).addAllFields(fieldsToSelect).build();
+        Dataset selectStageForAvro = StagedFilesSelection.builder().source(stagedFilesDataset).addAllFields(fieldsToSelectForAvro).build();
+
         return LogicalPlan.of(Collections.singletonList(
                 Copy.builder()
                         .targetDataset(mainDataset())
                         .sourceDataset(selectStage)
-                        .avroSourceDataset(Optional.empty())
+                        .avroSourceDataset(selectStageForAvro)
                         .addAllFields(fieldsToInsert)
                         .stagedFilesDatasetProperties(stagedFilesDataset.stagedFilesDatasetProperties())
                         .build()));
